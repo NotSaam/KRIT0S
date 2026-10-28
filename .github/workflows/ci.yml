@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  platform:
+    name: Platform · Laravel + Vue
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: krit0s_test
+          POSTGRES_USER: krit0s
+          POSTGRES_PASSWORD: krit0s
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U krit0s" --health-interval 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-retries 10
+
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: krit0s_test
+      DB_USERNAME: krit0s
+      DB_PASSWORD: krit0s
+      REDIS_CLIENT: predis
+      REDIS_HOST: 127.0.0.1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, intl, gd, zip
+          coverage: none
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+
+      - name: Install
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --no-audit --no-fund
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Lint (Pint)
+        run: vendor/bin/pint --test
+
+      - name: Typecheck (vue-tsc)
+        run: npx vue-tsc --noEmit
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Tests (Pest on PostgreSQL)
+        run: vendor/bin/pest
+
+      - name: Migrate + demo seed on PostgreSQL
+        run: php artisan migrate:fresh --seed --force
+
+  landing:
+    name: Landing · Vite + React
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build

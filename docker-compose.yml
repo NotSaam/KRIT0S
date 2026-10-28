@@ -1,0 +1,78 @@
+# KRIT0S — full stack: Laravel (web + queue worker), PostgreSQL and Redis.
+#   cp platform/.env.example platform/.env   # then set APP_KEY (php artisan key:generate --show)
+#   docker compose up --build
+#   → http://localhost:8080  (demo accounts on the login screen)
+
+x-app: &app
+  build: ./platform
+  env_file: ./platform/.env
+  environment:
+    APP_ENV: production
+    APP_DEBUG: "false"
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_PORT: 5432
+    DB_DATABASE: krit0s
+    DB_USERNAME: krit0s
+    DB_PASSWORD: ${POSTGRES_PASSWORD:-krit0s}
+    REDIS_CLIENT: predis
+    REDIS_HOST: redis
+    CACHE_STORE: redis
+    QUEUE_CONNECTION: redis
+    SESSION_DRIVER: redis
+  volumes:
+    - reports:/var/www/html/storage/app/private
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  web:
+    <<: *app
+    ports:
+      - "8080:80"
+
+  worker:
+    <<: *app
+    environment:
+      KRIT0S_ROLE: worker
+      APP_ENV: production
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_DATABASE: krit0s
+      DB_USERNAME: krit0s
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-krit0s}
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+    command: ["php", "artisan", "queue:work", "--tries=2", "--max-time=3600"]
+    depends_on:
+      - web
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: krit0s
+      POSTGRES_USER: krit0s
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-krit0s}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U krit0s"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  reports:
