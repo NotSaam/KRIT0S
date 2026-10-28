@@ -2,6 +2,8 @@
 
 > **Del hallazgo al veredicto.** Plataforma de reporting de pentest: proyectos, hallazgos puntuados con CVSS 3.1, biblioteca de plantillas, informes PDF versionados y un portal de solo lectura para el cliente.
 
+**Web del proyecto: [krit0s.vercel.app](https://krit0s.vercel.app)**
+
 *KRIT0S* viene del griego **κριτής**, el que juzga. Un pentest termina en un veredicto, y ese veredicto es el informe.
 
 | | |
