@@ -6,6 +6,15 @@
 
 *KRIT0S* viene del griego **κριτής**, el que juzga. Un pentest termina en un veredicto, y ese veredicto es el informe.
 
+![Panel de KRIT0S: riesgo abierto por severidad y hallazgos más graves](docs/dashboard.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/cvss.png" alt="Calculadora CVSS 3.1 en el formulario de hallazgo"/></td>
+    <td width="50%"><img src="docs/engagement.png" alt="Vista de un proyecto con hallazgos e informes"/></td>
+  </tr>
+</table>
+
 | | |
 |---|---|
 | **Stack** | Laravel 12 · Vue 3 + Inertia · TypeScript · PostgreSQL · Redis · Tailwind |
